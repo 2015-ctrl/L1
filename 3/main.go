@@ -2,33 +2,32 @@ package main
 
 import (
 	"fmt"
-	"sync"
+	"os"
 )
 
-var wg sync.WaitGroup
+func worker(id int, ch <-chan int) {
+        // каждый воркер бесконечно читает данные из канала и выводит их
+	for val := range ch {
+		fmt.Printf("Worker %d got %d\n", id, val)
+	}
+}
 
 func main() {
+	var n int
+	fmt.Print("Введите количество воркеров: ")
+        // считываем количество воркеров, которые нужно запустить
+	fmt.Fscan(os.Stdin, &n)
 
-	ch := make(chan int, 5) //Создаем канал, куда будут отправляться квадраты чисел
+	ch := make(chan int)
 
-	a := [5]int{2, 4, 6, 8, 10}
-
-	wg.Add(1)
-	go func(ch chan int) { //в анонимной горутине запускаем цикл, который будет записывать квадраты чисел
-		defer wg.Done()
-		for _, val := range a {
-			ch <- val * val
-		}
-
-		close(ch) //закрытие канала, чтобы сигнализировать о завершении отправки данных
-	}(ch)
-	c := 0
-	for nu := range ch { //Читаем канал
-		c += nu //Прибавляем значение из канала в сумму
-
+	// запускаем N воркеров — каждый из них будет конкурентно читать данные из канала
+	for i := 1; i <= n; i++ {
+		go worker(i, ch)
 	}
-	fmt.Println(c)
 
-	wg.Wait()
-
+	// постоянная запись данных в канал (главная горутина)
+	for i := 1; ; i++ {
+		ch <- i
+	}
 }
+
